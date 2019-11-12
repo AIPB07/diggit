@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block header %}{% endblock %}
+{% block title %}{{g.user[1]}}'s friends{% endblock %}
+
+{% block content %}
+    <div id="flash"></div>
+    <div class="row h-100">
+        <div class="col-sm-1"></div>
+        <div class="col-sm-4">
+            <h2 class="text-center"><span id="n_following">{{ (following|length)|int }}</span> Following</h2>
+            <ul class="list-group" id="following">
+            {% for friend in following %}
+                <li class="list-group-item d-flex">
+                    <span class="flex-grow-1">{{friend}}</span>
+                    <a class="nostyle" title="View collection" href="{{ url_for('friend.user', username=friend) }}"><i class="pt-1 pr-3 fas fa-record-vinyl"></i></a>
+                    <a class="nostyle unfollow" title="Stop following friend" href="#"><i class="pt-1 fas fa-times-circle"></i></a>
+                </li>
+            {% endfor %}
+            </ul>
+        </div>
+        <div class="col-sm-2"></div>
+        <div class="col-sm-4">
+            <h2 class="text-center">{{followers|length}} Followers</h2>
+            <ul class="list-group" id="followers">
+            {% for friend in followers %}
+                <li class="list-group-item d-flex">
+                    <span class="flex-grow-1">{{friend}}</span>
+                    <a class="nostyle" title="View collection" href="{{ url_for('friend.user', username=friend) }}"><i class="pt-1 pr-3 fas fa-record-vinyl"></i></a>
+                    {% if friend in following %}
+                        <button class="pt-0 pr-1 pl-1 btn btn-sm btn-secondary" disabled>Following</button>
+                    {% else %}
+                        <button class="pt-0 pr-1 pl-1 btn btn-sm btn-secondary follow">Follow</button>
+                    {% endif %}
+                </li>
+            {% endfor %}
+            </ul>
+        </div>
+        <div class="col-sm-1"></div>
+    </div>
+    <form method="POST" action="{{ url_for('friend.find') }}">
+        <div class="form-group pt-3">
+            <input name="query" id="query" placeholder="Find a friend" class="form-control">
+        </div>
+        <button type="submit" class="btn btn-secondary">Search</button>
+    </form>
+{% endblock %}
+
+{% block scripts %}
+
+    <!-- Load jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+    <script>
+        $(document).on("click", ".unfollow", function(event) {
+            console.log('Clicked!');
+            let elem = event.target.parentNode;
+            let data = {
+                username: $(elem).siblings("span").text()
+            }
+            $.ajax({
+                type: 'POST',
+                url: "{{ url_for('friend.remove') }}",
+                data: JSON.stringify(data),
+                contentType: 'application/json;charset=UTF-8',
+                success: function(result) {
+                    if (result['type'] == 'success') {
+                        // remove user from 'following'
+                        $(elem).parent().remove();
+                        // if user in 'followers', add option to follow again
+                        if ($("#followers:contains("+data.username+")").length != 0) {
+                            $("#followers").find("span:contains("+data.username+")").next().next().removeAttr("disabled").addClass("follow").text("Follow");
+                            // decrement 'following' number
+                            $("#n_following").text(parseInt($("#n_following").text()) - 1);
+                        }
+                    };
+                    // flash message
+                    $("#flash").html("<div class='alert alert-" + result['type'] + "'>" + result['message'] + "</div>");
+                }
+            });
+        });
+
+        $(document).on("click", ".follow", function(event) {
+            console.log('Clicked!');
+            let elem = event.target;
+            let data = {
+                username: $(elem).siblings("span").text()
+            }
+            $.ajax({
+                type: 'POST',
+                url: "{{ url_for('friend.add') }}",
+                data: JSON.stringify(data),
+                contentType: 'application/json;charset=UTF-8',
+                success: function(result) {
+                    if (result['type'] == 'success') {
+                        // add user to 'following'
+                        let html = `
+                            <li class="list-group-item d-flex">
+                                <span class="flex-grow-1">${data.username}</span>
+                                <a class="nostyle" title="View collection" href="/user/${data.username}"><i class="pt-1 pr-3 fas fa-record-vinyl"></i></a>
+                                <a class="nostyle unfollow" title="Stop following friend" href="#"><i class="pt-1 fas fa-times-circle"></i></a>
+                            </li>
+                        `;
+                        $("#following").append(html);
+                        // if user in 'followers', remove option to follow
+                        if ($("#followers:contains("+data.username+")").length != 0) {
+                            $("#followers").find("span:contains("+data.username+")").next().next().removeClass("follow").attr("disabled", "").text("Following");
+                            // increment 'following' number
+                            $("#n_following").text(parseInt($("#n_following").text()) + 1);
+                        }
+                    }
+                    $("#flash").html("<div class='alert alert-" + result['type'] + "'>" + result['message'] + "</div>");
+                }
+            })
+        })
+    </script>
+
+{% endblock %}

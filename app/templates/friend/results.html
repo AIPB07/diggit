@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <h1>{% block title %}Results{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+    <div id="flash"></div>
+    <div>
+        {% if not results %}
+            <p>No results found</p>
+        {% endif %}
+        {% for result in results %}
+            {% set id = loop.index %}
+            <p>{{result}}<span><a id="{{id}}" title="Follow" class="nostyle add" href="#"><i class="fas fa-plus-square"></i></a></span></p>
+        {% endfor %}
+    </div>
+{% endblock %}
+
+{% block scripts %}
+
+    <!-- Load jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+    <script>
+        $(".add").click(function(event) {
+            let id = event.target.parentNode.id;
+            console.log('Clicked!')
+            let data = {
+                username: $("#"+id).parent().parent().text()
+            };
+            console.log(data.username)
+            $.ajax({
+                type: 'POST',
+                url: "{{ url_for('friend.add') }}",
+                data: JSON.stringify(data),
+                contentType: 'application/json;charset=UTF-8',
+                success: function(result) {
+                    $("#flash").html("<div class='alert alert-" + result['type'] + "'>" + result['message'] + "</div>");
+                }
+            });
+        });
+    </script>
+
+{% endblock %}
+

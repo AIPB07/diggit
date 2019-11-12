@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Shelf{% endblock %}
+
+{% block content %}
+    <div>
+    <p>{{username}} has <strong><span id="n_records">{{n_items}}</span></strong> record{% if n_items != 1 %}<span id="s">s</span>{% endif %} in their collection</p>
+        {% for record in records %}
+            {% set recordloop = loop %}
+            <div class="row d-flex flex-row h-100">
+            {% for i in range(6) %}
+                {% set id = recordloop.index|string~loop.index|string %}
+                {% if record[i] %}
+                    <div class="col-sm-2 h-100">
+                        <div>
+                            <img id="{{'img_url'~id}}" src="{{record[i]['image_url']}}" class="img-fluid">
+                        </div>
+                        <div>
+                            <div id="{{'release'~id}}" class="font-weight-bold">{{record[i]['release_title']}}</div>
+                            <div id="{{'artist'~id}}">{{record[i]['artist']}}</div>
+                            <div class="d-flex justify-content-between">
+                                <a id="{{'uri'~id}}" href="{{'https://www.discogs.com'~record[i]['uri']}}" target="_blank">View on discogs</a>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

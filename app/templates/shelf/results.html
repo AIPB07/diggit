@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <h1>{% block title %}Search{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+    <div id="flash"></div>
+    <div>
+        {% if n_items|int <= limit|int %}
+            Displaying <b>1 - {{n_items}}</b> of <b>{{n_items}}</b> results for '{{query}}'
+        {% elif page|int == max_pages|int %}
+            Displaying <b>{{(page|int - 1) * limit|int + 1}} - {{n_items}}</b> of <b>{{n_items}}</b> results for '{{query}}'
+        {% else %}
+            Displaying <b>{{(page|int - 1) * limit|int + 1}} - {{page|int * limit|int}}</b> of <b>{{n_items}}</b> results for '{{query}}'
+        {% endif %}         
+    </div>
+
+    <div class="pt-3">
+        {% if page|int == 1 %}
+            <span><i class="fas fa-arrow-circle-left"></i> Prev</span>
+        {% else %}
+            <span><a class="nostyle" href="{{ url_for('shelf.search', query=query, page=page|int-1, limit=limit) }}"><i class="fas fa-arrow-circle-left"></i> Prev</a></span>
+        {% endif %}
+        {% if page|int == max_pages %}
+            <span>Next <i class="fas fa-arrow-circle-right"></i></span>
+        {% else %}
+            <span><a class="nostyle" href="{{ url_for('shelf.search', query=query, page=page|int+1, limit=limit) }}">Next <i class="fas fa-arrow-circle-right"></i></a></span>
+        {% endif %}
+    </div>
+
+    <div class="pt-3">
+        {% for record in records %}
+            {% set recordloop = loop %}
+            <div class="row d-flex flex-row h-100">
+            {% for i in range(6) %}
+                {% set id = recordloop.index|string~loop.index|string %}
+                {% if record[i] %}
+                    <div class="col-sm-2 h-100">
+                        <div>
+                            <img id="{{'img_url'~id}}" src="{{record[i]['image_url']}}" class="img-fluid">
+                        </div>
+                        <div>
+                            <div id="{{'release'~id}}" class="font-weight-bold">{{record[i]['release_title']}}</div>
+                            <div id="{{'artist'~id}}">{{record[i]['artist']}}</div>
+                            <div class="d-flex justify-content-between">
+                                <a id="{{'uri'~id}}" href="{{'https://www.discogs.com'~record[i]['uri']}}" target="_blank">View on discogs</a>
+                                {% if g.user %}
+                                    <a id="{{id}}" title="Add to shelf" class="nostyle add" href="#"><i class="fas fa-plus-square"></i></a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}
+
+{% block scripts %}
+
+    <!-- Load jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+    <script>
+        $(".add").click(function(event) {
+            let id = event.target.parentNode.id;
+            let data = {
+                'release_title': $('#release'+id).html(),
+                'artist': $('#artist'+id).html(),
+                'uri': $('#uri'+id).attr('href').slice(23,),
+                'image_url': $('#img_url'+id).attr('src')
+            };
+            $.ajax({
+                type: 'POST',
+                url: "{{ url_for('shelf.add') }}",
+                data: JSON.stringify(data),
+                contentType: 'application/json;charset=UTF-8',
+                success: function(result) {
+                    $("#flash").html("<div class='alert alert-" + result['type'] + "'>" + result['message'] + "</div>");
+                }
+            });
+        });
+    </script>
+    
+
+{% endblock %}
+
