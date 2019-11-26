@@ -35,11 +35,10 @@ def register():
                 "INSERT INTO user (username, password) VALUES (%s, %s)",
             (username, generate_password_hash(password)))
             db.commit()
-
             cursor.close()
-            db.close()
             return redirect(url_for('auth.login'))
 
+        cursor.close()
         flash(error)
     
     # reached via clicking a link
@@ -67,11 +66,9 @@ def login():
             session.clear()
             session['user_id'] = user[0]
             cursor.close()
-            db.close()
             return redirect(url_for('shelf.index'))
 
         cursor.close()
-        db.close()
         flash(error)
 
     # reached via clicking a link
@@ -90,6 +87,7 @@ def load_logged_in_user():
             "SELECT * FROM user WHERE id = %s", (user_id,)
         )
         g.user = cursor.fetchone()
+        cursor.close()
 
 @bp.route('/logout')
 def logout():

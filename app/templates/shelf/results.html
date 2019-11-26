@@ -7,7 +7,9 @@
 {% block content %}
     <div id="flash"></div>
     <div>
-        {% if n_items|int <= limit|int %}
+        {% if n_items|int == 0 %}
+            Found no results for '{{query}}'
+        {% elif n_items|int <= limit|int %}
             Displaying <b>1 - {{n_items}}</b> of <b>{{n_items}}</b> results for '{{query}}'
         {% elif page|int == max_pages|int %}
             Displaying <b>{{(page|int - 1) * limit|int + 1}} - {{n_items}}</b> of <b>{{n_items}}</b> results for '{{query}}'
@@ -16,18 +18,20 @@
         {% endif %}         
     </div>
 
-    <div class="pt-3">
-        {% if page|int == 1 %}
-            <span><i class="fas fa-arrow-circle-left"></i> Prev</span>
-        {% else %}
-            <span><a class="nostyle" href="{{ url_for('shelf.search', query=query, page=page|int-1, limit=limit) }}"><i class="fas fa-arrow-circle-left"></i> Prev</a></span>
-        {% endif %}
-        {% if page|int == max_pages %}
-            <span>Next <i class="fas fa-arrow-circle-right"></i></span>
-        {% else %}
-            <span><a class="nostyle" href="{{ url_for('shelf.search', query=query, page=page|int+1, limit=limit) }}">Next <i class="fas fa-arrow-circle-right"></i></a></span>
-        {% endif %}
-    </div>
+    {% if n_items|int != 0 %}
+        <div class="pt-3">
+            {% if page|int == 1 %}
+                <span><i class="fas fa-arrow-circle-left"></i> Prev</span>
+            {% else %}
+                <span><a class="nostyle" href="{{ url_for('shelf.search', query=query, page=page|int-1, limit=limit) }}"><i class="fas fa-arrow-circle-left"></i> Prev</a></span>
+            {% endif %}
+            {% if page|int == max_pages %}
+                <span>Next <i class="fas fa-arrow-circle-right"></i></span>
+            {% else %}
+                <span><a class="nostyle" href="{{ url_for('shelf.search', query=query, page=page|int+1, limit=limit) }}">Next <i class="fas fa-arrow-circle-right"></i></a></span>
+            {% endif %}
+        </div>
+    {% endif %}
 
     <div class="pt-3">
         {% for record in records %}
@@ -38,7 +42,7 @@
                 {% if record[i] %}
                     <div class="col-sm-2 h-100">
                         <div>
-                            <img id="{{'img_url'~id}}" src="{{record[i]['image_url']}}" class="img-fluid">
+                            <img id="{{'img_url'~id}}" src="{{record[i]['image_url']}}" alt="No image found" class="img-fluid">
                         </div>
                         <div>
                             <div id="{{'release'~id}}" class="font-weight-bold">{{record[i]['release_title']}}</div>
@@ -67,8 +71,8 @@
         $(".add").click(function(event) {
             let id = event.target.parentNode.id;
             let data = {
-                'release_title': $('#release'+id).html(),
-                'artist': $('#artist'+id).html(),
+                'release_title': $('#release'+id).text(),
+                'artist': $('#artist'+id).text(),
                 'uri': $('#uri'+id).attr('href').slice(23,),
                 'image_url': $('#img_url'+id).attr('src')
             };

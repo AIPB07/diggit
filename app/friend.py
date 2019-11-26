@@ -10,7 +10,7 @@ from more_itertools import peekable
 from app.db import get_db
 from app.auth import login_required
 
-bp = Blueprint('friend', __name__)
+bp = Blueprint('friend', __name__, url_prefix='/friend')
 
 @bp.route('/friends')
 @login_required
@@ -38,7 +38,6 @@ def friends():
         followers.append(result[0])
 
     cursor.close()
-    db.close()
     return render_template('friend/friends.html', following=following,
                             followers=followers)
 
@@ -46,7 +45,7 @@ def friends():
 @login_required
 def find():
     if request.method == 'POST':
-        # reached via submitting a form
+        # get search query
         query = request.form['query']
         # list for storing search results
         results = []
@@ -62,75 +61,85 @@ def find():
             results.append(result[0])
         
         cursor.close()
-        db.close()
         return render_template('friend/results.html', results=results)
 
-    # reached via clicking a link
-    return render_template('friend/find.html')
+    # reached via link/URL
+    return redirect(url_for('friend.friends'))
 
-@bp.route('/add', methods=['POST'])
+
+@bp.route('/add', methods=['GET', 'POST'])
 @login_required
 def add():
-    # get username
-    username = request.json['username']
-    # dict for storing response
-    response = {}
-    # get db connection and cursor
-    db = get_db()
-    cursor = db.cursor()
-    # check whether friendship already exists
-    cursor.execute(
-        "SELECT * FROM friend WHERE user_id = %s AND friend_id = "
-        "(SELECT id FROM user WHERE username = %s)",
-        (g.user[0], username)
-    )
-    friendship = cursor.fetchone()
-
-    if friendship:
-        response['type'] = 'danger'
-        response['message'] = 'You are already following ' + username
-    
-    if not response:
-        # add friendship to 'friend' db
+    if request.method == 'POST':
+        # get username
+        username = request.json['username']
+        # dict for storing response
+        response = {}
+        # get db connection and cursor
+        db = get_db()
+        cursor = db.cursor()
+        # check whether friendship already exists
         cursor.execute(
-            "INSERT INTO friend (user_id, friend_id) VALUES (%s, "
-            "(SELECT id FROM user WHERE username = %s))",
+            "SELECT * FROM friend WHERE user_id = %s AND friend_id = "
+            "(SELECT id FROM user WHERE username = %s)",
+            (g.user[0], username)
+        )
+        friendship = cursor.fetchone()
+
+        if friendship:
+            response['type'] = 'danger'
+            response['message'] = 'You are already following ' + username
+        
+        if not response:
+            # add friendship to 'friend' db
+            cursor.execute(
+                "INSERT INTO friend (user_id, friend_id) VALUES (%s, "
+                "(SELECT id FROM user WHERE username = %s))",
+                (g.user[0], username)
+            )
+            db.commit()
+            response['type'] = 'success'
+            response['message'] = 'You are now following ' + username
+        
+        cursor.close()
+        return jsonify(response)
+
+    # reached via link/URL
+    return redirect(url_for('friend.friends'))
+
+@bp.route('/remove', methods=['GET', 'POST'])
+@login_required
+def remove():
+    if request.method == 'POST':
+        # get username
+        username = request.json['username']
+        # dict for storing response
+        response = {}
+        # get db connection and cursor
+        db = get_db()
+        cursor = db.cursor(buffered=True)
+        # delete friendship from 'friend' db
+        cursor.execute(
+            "DELETE FROM friend WHERE user_id = %s AND friend_id = "
+            "(SELECT id from user WHERE username = %s)",
             (g.user[0], username)
         )
         db.commit()
-        response['type'] = 'success'
-        response['message'] = 'You are now following ' + username
-    
-    return jsonify(response)
+        friendship = cursor.fetchone()
 
-@bp.route('/remove', methods=['POST'])
-@login_required
-def remove():
-    # get username
-    username = request.json['username']
-    # dict for storing response
-    response = {}
-    # get db connection and cursor
-    db = get_db()
-    cursor = db.cursor(buffered=True)
-    # delete friendship from 'friend' db
-    cursor.execute(
-        "DELETE FROM friend WHERE user_id = %s AND friend_id = "
-        "(SELECT id from user WHERE username = %s)",
-        (g.user[0], username)
-    )
-    db.commit()
-    friendship = cursor.fetchone()
-
-    if friendship:
-        response['type'] = 'danger'
-        response['message'] = 'Failed to remove friend'
+        if friendship:
+            response['type'] = 'danger'
+            response['message'] = 'Failed to remove friend'
+        
+        if not response:
+            response['type'] = 'success'
+            response['message'] = 'Removed ' + username + ' from following'
+        
+        cursor.close()
+        return jsonify(response)
     
-    if not response:
-        response['type'] = 'success'
-        response['message'] = 'Removed ' + username + ' from following'
-    
-    return jsonify(response)
+    # reached via link/URL
+    return redirect(url_for('friend.friends'))
 
 @bp.route('/user/<username>', methods=['GET'])
 def user(username):
@@ -162,6 +171,5 @@ def user(username):
     n_items = i - 1
 
     cursor.close()
-    db.close()
     return render_template('friend/user.html', records=records,
                             n_items=n_items, username=username)

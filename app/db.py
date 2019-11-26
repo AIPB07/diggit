@@ -8,6 +8,7 @@ from . import schema
 
 
 def get_db():
+    # if db connection for request doesn't exist yet, create one
     if 'db' not in g:
         try:
             g.db = mysql.connector.connect(
@@ -28,6 +29,7 @@ def get_db():
 
 
 def close_db(e=None):
+    # if db connection exists, close it
     db=g.pop('db', None)
 
     if db is not None:
@@ -35,9 +37,11 @@ def close_db(e=None):
 
 
 def init_db():
+    # get db connection and cursor
     db = get_db()
     cursor = db.cursor()
 
+    # create tables
     for table in schema.TABLES:
         table_description = schema.TABLES[table]
         try:
@@ -50,16 +54,22 @@ def init_db():
                 print(err)
         else:
             print('OK')
+    
+    cursor.close()
 
 
+# define a command line command 'init-db' that calls init_db()
 @click.command('init-db')
 @with_appcontext
 def init_db_command():
-    """Clear the existing data and create new tables"""
+    """Create new tables"""
     init_db()
     click.echo('Initialized the database.')
 
 
 def init_app(app):
+    """Register close_db() and init_db_command() with application instance"""
+    # call close_db() when cleaning up after returning response
     app.teardown_appcontext(close_db)
+    # add command that can be called with the flask command
     app.cli.add_command(init_db_command)
