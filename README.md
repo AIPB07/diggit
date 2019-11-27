@@ -3,6 +3,9 @@ A web application built using Flask along with the discogs API, allowing users t
 
 Users can create an account, search for and add records to their 'shelf', view another user's shelf and follow other users.
 
+## Demo
+![Diggit](demo/record-collection.gif)
+
 ## Installation
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install the required packages. 
 
